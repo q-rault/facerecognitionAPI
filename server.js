@@ -2,6 +2,22 @@ const express=require('express');
 const bodyParser= require('body-parser');
 const bcrypt= require('bcrypt-nodejs');
 const cors=require('cors');
+const knex = require('knex');
+
+const db =knex({
+  client: 'pg',
+  connection: {
+    host : '127.0.0.1',
+    // port : 5432,
+    user : 'qrault',
+    password : '',
+    database : 'smart-brain'
+  }
+});
+
+db.select('*').from('users').then(data => {
+	console.log(data);
+});
 
 const app=express();
 
@@ -9,26 +25,26 @@ app.use(bodyParser.urlencoded({extended:false}));
 app.use(bodyParser.json());
 app.use(cors());
 
-const extractedDatabase= {
-	users: [
-		{
-			id: '123',
-			name: 'John',
-			email: 'john@gmail.com',
-			password: 'ilovecookies',
-			entries: 0,
-			joined : new Date()
-		},
-		{
-			id: '124',
-			name: 'Sally',
-			email: 'sally@gmail.com',
-			password: 'bananas',
-			entries: 0,
-			joined : new Date()
-		},		
-	]
-}
+// const extractedDatabase= {
+// 	users: [
+// 		{
+// 			id: '123',
+// 			name: 'John',
+// 			email: 'john@gmail.com',
+// 			password: 'ilovecookies',
+// 			entries: 0,
+// 			joined : new Date()
+// 		},
+// 		{
+// 			id: '124',
+// 			name: 'Sally',
+// 			email: 'sally@gmail.com',
+// 			password: 'bananas',
+// 			entries: 0,
+// 			joined : new Date()
+// 		},		
+// 	]
+// }
 
 
 app.get('/', (req, res) => {
@@ -61,17 +77,17 @@ app.post('/register', (req, res) => {
 	//     console.log(hash);
 	//     // Store hash in your password DB.
 	// })
-	extractedDatabase.users.push({
-		id: '125',
-		name: name,
-		email: email,
-		// password: password,
-		entries: 0,
-		joined : new Date()
-	})
-	// res.send('signin post');
-	console.log(extractedDatabase.users[extractedDatabase.users.length-1]);
-	res.json(extractedDatabase.users[extractedDatabase.users.length-1]);
+	db('users')
+		.returning('*')
+		.insert({
+			name: name,
+			email: email,
+			joined : new Date()
+		})
+		.then(user => {
+			res.json(user[0]);
+		})
+		.catch(err => res.status(400).json('unable to register'));
 })
 
 app.get('/profile/:id', (req, res) => {
