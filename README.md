@@ -1,2 +1,2 @@
 # facerecognitionAPI
-API called by q-rault/facerecognitionapp
+REST API called by q-rault/facerecognitionapp
