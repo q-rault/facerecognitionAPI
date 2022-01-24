@@ -15,113 +15,87 @@ const db =knex({
   }
 });
 
-db.select('*').from('users').then(data => {
-	console.log(data);
-});
-
 const app=express();
 
 app.use(bodyParser.urlencoded({extended:false}));
 app.use(bodyParser.json());
 app.use(cors());
 
-// const extractedDatabase= {
-// 	users: [
-// 		{
-// 			id: '123',
-// 			name: 'John',
-// 			email: 'john@gmail.com',
-// 			password: 'ilovecookies',
-// 			entries: 0,
-// 			joined : new Date()
-// 		},
-// 		{
-// 			id: '124',
-// 			name: 'Sally',
-// 			email: 'sally@gmail.com',
-// 			password: 'bananas',
-// 			entries: 0,
-// 			joined : new Date()
-// 		},		
-// 	]
-// }
-
 
 app.get('/', (req, res) => {
-	res.send(extractedDatabase.users)
+	res.json('success');
 })
 
 app.post('/signin', (req, res) => {
 	const {email, name, password} =req.body;
-	// Load hash from your password DB.
-	// let ilovecookies_hash='$2a$10$zW1l1tGlzkBk5Sg96P3ps.uGmk49ShXXayBQ277.Suv/TCIR4VG.W';
-	// bcrypt.compare('ilovecookies', ilovecookies_hash, function(err, res) {
-	//     console.log(res);// res == true
-	// });
-	// bcrypt.compare("veggies", ilovecookies_hash, function(err, res) {
-	//     console.log(res);// res = false
-	// });
-	// res.send('signin post');
-	console.log(email, password)
-	if (email===extractedDatabase.users[0].email && 
-		password ===extractedDatabase.users[0].password) {
-			res.json(extractedDatabase.users[0]);
-	} else {
-		res.status(400).json('error logging in');
-	}
+	db('login').where({email})
+	.then(login => {
+		const isValid=bcrypt.compareSync(password, login[0].hash);
+		if (isValid) {
+			return db('users').where({email})
+			.then(user => {res.json(user[0])})
+		} else {
+			return res.status(400).json('no such user');
+		}
+	})
+
+
+	.catch(err => res.status(400).json('unable to login'))
 })
 
 app.post('/register', (req, res) => {
 	const {email, name, password} =req.body;
-	// bcrypt.hash('ilovecookies', null, null, function(err, hash) {
-	//     console.log(hash);
-	//     // Store hash in your password DB.
-	// })
-	db('users')
-		.returning('*')
-		.insert({
-			name: name,
-			email: email,
-			joined : new Date()
+	const hash = bcrypt.hashSync(password);
+	db.transaction(trx => {
+		trx.insert({
+			hash : hash,
+			email: email
 		})
-		.then(user => {
-			res.json(user[0]);
+		.into('login')
+		.returning('email')
+		.then(loginEmail => {
+			return trx('users')
+				.returning('*')
+				.insert({
+					name: name,
+					email: loginEmail[0].email,
+					joined : new Date()
+				})
+				.then(user => {
+					res.json(user[0]);
+				})			
 		})
-		.catch(err => res.status(400).json('unable to register'));
+		.then(trx.commit)
+		.catch(trx.rollback)
+	})
+	.catch(err => res.status(400).json('unable to register'))
 })
 
 app.get('/profile/:id', (req, res) => {
 	const { id } = req.params;
-	let found= false;
-	extractedDatabase.users.forEach(user => {
-		if (user.id===id) {
-			found=true
-			return res.json(user);
-		}
-	})
-	if (!found) {
-		res.status(400).json('profile not found')
-	}
+	db
+	.select('*').from('users').where({id})
+		.then(user => {
+			if (user.length) {
+				res.json(user[0]);				
+			} else {
+				res.status(400).json('unable to find profile');	
+			}
+		})
+		.catch(err => res.status(400).json('error getting profile'))
 })
 
 app.put('/image', (req,res)=> {
 	const { id } = req.body;
-	let found= false;
-	extractedDatabase.users.forEach(user => {
-		if (user.id===id) {
-			found=true
-			user.entries++;
-			return res.json(user.entries);
-		}
-	})
-	if (!found) {
-		res.status(400).json('no such user')
-	}
+	db('users')
+		.returning('*')
+		.where({id})
+		.increment('entries',1)
+		.then(entries => {
+			res.json(entries[0].entries)
+		})
+		.catch(err => res.status(400).json('unable to get entries'))
 })
-
-
-
-
 
 app.listen(3001, () => {
 	console.log('initialized server on port 3001')
