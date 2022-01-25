@@ -9,7 +9,7 @@ const signin=require('./controllers/signin');
 const image=require('./controllers/image');
 const profile=require('./controllers/profile');
 
-const PORT= process.env.PORT
+const PORT= process.env.PORT;
 
 const db =knex({
   client: 'pg',
@@ -46,4 +46,4 @@ app.listen(PORT, () => {
 	console.log(`initialized server on port ${PORT}`)
 })
 
-console.log(process.env)
+//console.log(process.env)
