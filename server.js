@@ -1,25 +1,26 @@
-const express=require('express');
-const bodyParser= require('body-parser');
-const bcrypt= require('bcrypt-nodejs');
-const cors=require('cors');
+const express = require('express');
+const bodyParser = require('body-parser');
+const bcrypt = require('bcrypt-nodejs');
+const cors = require('cors');
 const knex = require('knex');
 
-const register=require('./controllers/register');
-const signin=require('./controllers/signin');
-const image=require('./controllers/image');
-const profile=require('./controllers/profile');
+const register = require('./controllers/register');
+const signin = require('./controllers/signin');
+const image = require('./controllers/image');
+const profile = require('./controllers/profile');
+const {Client} = require('pg');
 
-const PORT= process.env.PORT;
+
+const PORT= process.env.PORT || 3001;
 
 const db =knex({
   client: 'pg',
   connection: {
-    host : '127.0.0.1',
-    // port : 5432,
-    user : 'qrault',
-    password : '',
-    database : 'smart-brain'
-  }
+	  connectionString: process.env.DATABASE_URL,
+	  ssl: {
+	    rejectUnauthorized: false
+	  }
+	}
 });
 
 const app=express();
@@ -42,7 +43,7 @@ app.get('/profile/:id', profile.handleProfile(db))
 app.put('/image', image.handleImage(db))
 app.post('/imageUrl', image.handleImageUrl)
 
-app.listen(PORT, () => {
+app.listen(PORT , () => {
 	console.log(`initialized server on port ${PORT}`)
 })
 
